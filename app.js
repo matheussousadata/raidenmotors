@@ -572,8 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       try {
-        // Altere a URL abaixo para a URL do Render quando fizer o deploy do backend
-        const response = await fetch('http://localhost:3000/api/financiamento', {
+          const response = await fetch('https://raidenmotors.onrender.com/api/financiamento', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
