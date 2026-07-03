@@ -536,9 +536,8 @@ function updateModalClosePos() {
 window.addEventListener('resize', updateModalClosePos);
 updateModalClosePos();
 
-// ==================== ENVIO DO FORMULÁRIO CORRIGIDO ====================
+// ==================== ENVIO DO FORMULÁRIO SINCRONIZADO COM NEON ====================
 document.addEventListener('DOMContentLoaded', () => {
-  // Captura o formulário correto baseado no seu HTML (ID formOverlay)
   const formOverlay = document.getElementById('formOverlay');
   const targetForm = formOverlay ? formOverlay.querySelector('form') : null;
 
@@ -546,33 +545,47 @@ document.addEventListener('DOMContentLoaded', () => {
     targetForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      // MONTAGEM DO OBJETO: As chaves da esquerda precisam ser EXATAMENTE as que estão no seu server.js
+      // 1. Tratamento crucial: Transforma a data DD/MM/AAAA em YYYY-MM-DD para o tipo DATE do Neon
+      const rawDate = document.getElementById('f_nasc')?.value || '';
+      let formattedDate = '';
+      if (rawDate.includes('/')) {
+        const parts = rawDate.split('/');
+        if (parts.length === 3) {
+          formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`; // Formato YYYY-MM-DD
+        }
+      } else {
+        formattedDate = rawDate; // Caso o input já seja do tipo date nativo
+      }
+
+      // 2. Montagem do objeto blindado contra erros NOT NULL
       const formData = {
-        veiculo_interesse: document.getElementById('formCarName')?.innerText || 'Não especificado',
-        nome_completo: document.getElementById('f_nome')?.value || '',
-        cpf: document.getElementById('f_cpf')?.value || '',
-        data_nascimento: document.getElementById('f_nasc')?.value || '',
-        telefone: document.getElementById('f_tel')?.value || '',
-        whatsapp: document.getElementById('f_wha')?.value || null,
-        email: document.getElementById('f_email')?.value || '',
-        estado_civil: document.getElementById('f_ec')?.value || 'Não informado',
+        veiculo_interesse: document.getElementById('formCarName')?.innerText?.substring(0, 150) || 'Não especificado',
+        nome_completo: document.getElementById('f_nome')?.value?.substring(0, 150) || 'Não informado',
+        cpf: document.getElementById('f_cpf')?.value || '000.000.000-00',
+        data_nascimento: formattedDate || '2000-01-01', // Evita quebrar o NOT NULL DATE
+        telefone: document.getElementById('f_tel')?.value || '00 00000-0000',
+        whatsapp: document.getElementById('f_wha')?.value || '', // Convertido para string vazia em vez de null
+        email: document.getElementById('f_email')?.value?.substring(0, 150) || 'sem@email.com',
         
-        // Mapeamentos adicionais tratados para evitar quebra de tipos numéricos
-        profissao: document.getElementById('f_profissao')?.value || 'Não informado',
-        empresa_atual: document.getElementById('f_empresa')?.value || null,
-        tempo_empresa: document.getElementById('f_tempo')?.value || null,
-        renda_mensal: parseFloat(document.getElementById('f_renda')?.value) || 0.00,
-        outras_fontes_renda: parseFloat(document.getElementById('f_outras_renda')?.value) || 0.00,
-        valor_entrada: parseFloat(document.getElementById('f_entrada')?.value) || 0.00,
+        // Alinhando com os Enums e textos obrigatórios da imagem do Neon
+        estado_civil: document.getElementById('f_ec')?.value || 'Solteiro(a)', 
+        profissao: document.getElementById('f_profissao')?.value || 'Não informada',
+        empresa_atual: document.getElementById('f_empresa')?.value || '',
+        tempo_empresa: document.getElementById('f_tempo')?.value || '',
+        
+        // Convertendo estritamente para números válidos (NUMERIC)
+        renda_mensal: parseFloat(document.getElementById('f_renda')?.value?.replace(/[^0-9,-]/g, '')?.replace(',', '.')) || 0.00,
+        outras_fontes_renda: parseFloat(document.getElementById('f_outras_renda')?.value?.replace(/[^0-9,-]/g, '')?.replace(',', '.')) || 0.00,
+        valor_entrada: parseFloat(document.getElementById('f_entrada')?.value?.replace(/[^0-9,-]/g, '')?.replace(',', '.')) || 0.00,
+        
         possui_veiculo_troca: document.getElementById('f_troca')?.value || 'Não',
-        cidade: document.getElementById('f_cidade')?.value || 'Não informado',
-        estado: document.getElementById('f_estado')?.value || 'UF',
-        observacoes: document.getElementById('f_obs')?.value || null,
+        cidade: document.getElementById('f_cidade')?.value || 'Não informada',
+        estado: document.getElementById('f_estado')?.value || 'SP',
+        observacoes: document.getElementById('f_obs')?.value || '',
         aceita_termos: document.getElementById('f_termos')?.checked || true
       };
 
       try {
-        // Envia direto para a API do Render que está rodando online ("Live")
         const response = await fetch('https://raidenmotors.onrender.com/api/financiamento', {
           method: 'POST',
           headers: {
@@ -581,23 +594,18 @@ document.addEventListener('DOMContentLoaded', () => {
           body: JSON.stringify(formData)
         });
 
-        // Aguarda a resposta real do backend
         const result = await response.json();
 
         if (result.success) {
-          // Apenas se o banco salvou com sucesso, nós mostramos o modal e limpamos os dados
-          alert('Sucesso! Seus dados foram gravados no banco Neon.');
-          
-          if (typeof closeFormModal === 'function') {
-            closeFormModal(); 
-          }
+          alert('Sucesso absoluto! Dados gravados na tabela do Neon.');
+          if (typeof closeFormModal === 'function') closeFormModal();
           targetForm.reset();
         } else {
-          alert('O servidor recusou os dados: ' + result.message);
+          alert('O servidor rejeitou: ' + result.message);
         }
       } catch (error) {
-        console.error('Erro na requisição Fetch:', error);
-        alert('Não foi possível conectar ao servidor do Render. Verifique sua conexão.');
+        console.error('Erro de rede/comunicação:', error);
+        alert('Erro ao conectar ao Render. Abra o console (F12) para ver os detalhes técnicos.');
       }
     });
   }
