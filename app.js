@@ -536,17 +536,17 @@ function updateModalClosePos() {
 window.addEventListener('resize', updateModalClosePos);
 updateModalClosePos();
 
-// ==================== ENVIO DO FORMULÁRIO (CONEXÃO COM O BACK-END) ====================
+// ==================== ENVIO DO FORMULÁRIO CORRIGIDO ====================
 document.addEventListener('DOMContentLoaded', () => {
-  // Localiza o formulário contido dentro da estrutura do modal
-  const formContainer = document.getElementById('formOverlay');
-  const targetForm = formContainer ? formContainer.querySelector('form') : null;
+  // Captura o formulário correto baseado no seu HTML (ID formOverlay)
+  const formOverlay = document.getElementById('formOverlay');
+  const targetForm = formOverlay ? formOverlay.querySelector('form') : null;
 
   if (targetForm) {
     targetForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      // Captura os dados limpando strings e convertendo números vazios para evitar erros no banco
+      // MONTAGEM DO OBJETO: As chaves da esquerda precisam ser EXATAMENTE as que estão no seu server.js
       const formData = {
         veiculo_interesse: document.getElementById('formCarName')?.innerText || 'Não especificado',
         nome_completo: document.getElementById('f_nome')?.value || '',
@@ -557,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
         email: document.getElementById('f_email')?.value || '',
         estado_civil: document.getElementById('f_ec')?.value || 'Não informado',
         
-        // Garante valores textuais ou numéricos limpos para as colunas do Neon
+        // Mapeamentos adicionais tratados para evitar quebra de tipos numéricos
         profissao: document.getElementById('f_profissao')?.value || 'Não informado',
         empresa_atual: document.getElementById('f_empresa')?.value || null,
         tempo_empresa: document.getElementById('f_tempo')?.value || null,
@@ -572,7 +572,8 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       try {
-          const response = await fetch('https://raidenmotors.onrender.com/api/financiamento', {
+        // Envia direto para a API do Render que está rodando online ("Live")
+        const response = await fetch('https://raidenmotors.onrender.com/api/financiamento', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -580,22 +581,23 @@ document.addEventListener('DOMContentLoaded', () => {
           body: JSON.stringify(formData)
         });
 
+        // Aguarda a resposta real do backend
         const result = await response.json();
 
         if (result.success) {
-          alert('Sucesso! Sua proposta de financiamento foi salva na base da Raiden Motors.');
+          // Apenas se o banco salvou com sucesso, nós mostramos o modal e limpamos os dados
+          alert('Sucesso! Seus dados foram gravados no banco Neon.');
           
-          // Executa a função global de fechar o modal (presente nos seus botões onclick)
           if (typeof closeFormModal === 'function') {
-            closeFormModal();
+            closeFormModal(); 
           }
-          targetForm.reset(); 
+          targetForm.reset();
         } else {
-          alert('Erro no servidor: ' + result.message);
+          alert('O servidor recusou os dados: ' + result.message);
         }
       } catch (error) {
-        console.error('Erro ao conectar à API:', error);
-        alert('Não foi possível se comunicar com o servidor. Verifique se o backend está ativo.');
+        console.error('Erro na requisição Fetch:', error);
+        alert('Não foi possível conectar ao servidor do Render. Verifique sua conexão.');
       }
     });
   }
