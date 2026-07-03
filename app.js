@@ -535,3 +535,69 @@ function updateModalClosePos() {
 }
 window.addEventListener('resize', updateModalClosePos);
 updateModalClosePos();
+
+// ==================== ENVIO DO FORMULÁRIO (CONEXÃO COM O BACK-END) ====================
+document.addEventListener('DOMContentLoaded', () => {
+  // Localiza o formulário contido dentro da estrutura do modal
+  const formContainer = document.getElementById('formOverlay');
+  const targetForm = formContainer ? formContainer.querySelector('form') : null;
+
+  if (targetForm) {
+    targetForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Captura os dados limpando strings e convertendo números vazios para evitar erros no banco
+      const formData = {
+        veiculo_interesse: document.getElementById('formCarName')?.innerText || 'Não especificado',
+        nome_completo: document.getElementById('f_nome')?.value || '',
+        cpf: document.getElementById('f_cpf')?.value || '',
+        data_nascimento: document.getElementById('f_nasc')?.value || '',
+        telefone: document.getElementById('f_tel')?.value || '',
+        whatsapp: document.getElementById('f_wha')?.value || null,
+        email: document.getElementById('f_email')?.value || '',
+        estado_civil: document.getElementById('f_ec')?.value || 'Não informado',
+        
+        // Garante valores textuais ou numéricos limpos para as colunas do Neon
+        profissao: document.getElementById('f_profissao')?.value || 'Não informado',
+        empresa_atual: document.getElementById('f_empresa')?.value || null,
+        tempo_empresa: document.getElementById('f_tempo')?.value || null,
+        renda_mensal: parseFloat(document.getElementById('f_renda')?.value) || 0.00,
+        outras_fontes_renda: parseFloat(document.getElementById('f_outras_renda')?.value) || 0.00,
+        valor_entrada: parseFloat(document.getElementById('f_entrada')?.value) || 0.00,
+        possui_veiculo_troca: document.getElementById('f_troca')?.value || 'Não',
+        cidade: document.getElementById('f_cidade')?.value || 'Não informado',
+        estado: document.getElementById('f_estado')?.value || 'UF',
+        observacoes: document.getElementById('f_obs')?.value || null,
+        aceita_termos: document.getElementById('f_termos')?.checked || true
+      };
+
+      try {
+        // Altere a URL abaixo para a URL do Render quando fizer o deploy do backend
+        const response = await fetch('http://localhost:3000/api/financiamento', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert('Sucesso! Sua proposta de financiamento foi salva na base da Raiden Motors.');
+          
+          // Executa a função global de fechar o modal (presente nos seus botões onclick)
+          if (typeof closeFormModal === 'function') {
+            closeFormModal();
+          }
+          targetForm.reset(); 
+        } else {
+          alert('Erro no servidor: ' + result.message);
+        }
+      } catch (error) {
+        console.error('Erro ao conectar à API:', error);
+        alert('Não foi possível se comunicar com o servidor. Verifique se o backend está ativo.');
+      }
+    });
+  }
+});
